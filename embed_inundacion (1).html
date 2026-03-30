@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;background:#f0f2f5;padding:8px}
+.hd{background:#003399;color:#fff;padding:10px;border-radius:8px;text-align:center;margin-bottom:8px}
+.hd b{font-size:14px}.hd span{font-size:10px}
+.i{width:100%;padding:6px;border:1px solid #ccc;border-radius:4px;font-size:12px;margin:4px 0}
+.b{width:100%;padding:10px;background:#003399;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:bold;cursor:pointer;margin:6px 0}
+.b:disabled{background:#aaa;cursor:wait}
+#s{font-size:11px;color:#666;margin:4px 0;min-height:16px}
+#r{font-size:11px;margin:6px 0}
+</style></head><body>
+<div class="hd"><b>INUNDACI&#211;N</b><br><span>AXA COLPATRIA - Loss Control</span></div>
+<input class="i" id="la" placeholder="Latitud: 4.6097">
+<input class="i" id="lo" placeholder="Longitud: -74.0817">
+<input class="i" id="di" placeholder="Direcci&#243;n: Calle 72 #10-25">
+<button class="b" id="bt" onclick="go()">CONSULTAR INUNDACI&#211;N Y GENERAR PDF</button>
+<div id="s"></div><div id="r"></div>
+<script>
+function go(){var a=parseFloat(document.getElementById('la').value),o=parseFloat(document.getElementById('lo').value),d=document.getElementById('di').value.trim();if((!a||!o||isNaN(a)||isNaN(o))&&d){document.getElementById('s').innerText="Geocodificando...";document.getElementById('bt').disabled=true;fetch("https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?SingleLine="+encodeURIComponent(d+", Colombia")+"&outFields=*&maxLocations=1&f=json").then(function(r){return r.json()}).then(function(g){if(g.candidates&&g.candidates.length>0){var c=g.candidates[0];document.getElementById('la').value=c.location.y.toFixed(6);document.getElementById('lo').value=c.location.x.toFixed(6);qr(c.location.y,c.location.x,c.address)}else{document.getElementById('s').innerText="No encontrada";document.getElementById('bt').disabled=false}}).catch(function(e){document.getElementById('s').innerText="Error: "+e;document.getElementById('bt').disabled=false});return}if(!a||!o||isNaN(a)||isNaN(o)){document.getElementById('s').innerText="Ingrese datos";return}qr(a,o,d||(a+","+o))}
+function qr(la,lo,et){document.getElementById('bt').disabled=true;document.getElementById('s').innerText="Consultando...";var g=JSON.stringify({x:lo,y:la,spatialReference:{wkid:4326}});fetch("https://sig.fasecolda.com/serverbase//rest/services/Inundaci%C3%B3n2/MapServer/0/query?geometry="+encodeURIComponent(g)+"&geometryType=esriGeometryPoint&spatialRel=esriSpatialRelIntersects&outFields=*&returnGeometry=false&f=json").then(function(r){return r.json()}).then(function(d){var z=d.features&&d.features.length>0,at=z?d.features[0].attributes:{},v=z?(at.EMERGENCIA||"Presente"):"Sin afectacion",dp=z?(at.depto||""):"";document.getElementById('r').innerHTML=z?'<span style="color:#d32f2f;font-weight:bold">&#9888; EN ZONA: '+v+' - '+dp+'</span>':'<span style="color:#2e7d32;font-weight:bold">&#9989; Sin afectacion por inundacion</span>';mk(la,lo,et,z,v,dp);document.getElementById('bt').disabled=false;document.getElementById('s').innerText="PDF descargado"}).catch(function(e){document.getElementById('r').innerHTML="Error: "+e;document.getElementById('bt').disabled=false})}
+function mk(la,lo,et,z,v,dp){var d=new jspdf.jsPDF(),f=new Date().toLocaleString('es-CO');d.setFillColor(0,51,153);d.rect(0,0,210,30,'F');d.setTextColor(255,255,255);d.setFontSize(14);d.setFont(undefined,'bold');d.text("REPORTE INUNDACION",105,12,{align:"center"});d.setFontSize(9);d.setFont(undefined,'normal');d.text("AXA COLPATRIA - Visor Capas de Riesgos - "+f,105,20,{align:"center"});d.setTextColor(0,0,0);d.setFontSize(10);d.text("Ubicacion: "+String(et).substring(0,80),14,40);d.text("Lat: "+la.toFixed(6)+" | Lon: "+lo.toFixed(6),14,47);d.setFontSize(12);d.setFont(undefined,'bold');d.text("Resultado:",14,60);if(z){d.setTextColor(211,47,47);d.text("EN ZONA DE INUNDACION",14,68);d.setTextColor(0,0,0);d.setFontSize(10);d.setFont(undefined,'normal');d.text("Emergencia: "+v,14,76);d.text("Departamento: "+dp,14,83)}else{d.setTextColor(46,125,50);d.text("SIN AFECTACION POR INUNDACION",14,68)}d.setTextColor(130,130,130);d.setFontSize(7);d.text("CONFIDENCIAL - AXA COLPATRIA",105,286,{align:"center"});d.save("Inundacion_"+la.toFixed(4)+"_"+lo.toFixed(4)+".pdf")}
+</script></body></html>
